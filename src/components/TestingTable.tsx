@@ -1,5 +1,5 @@
 import React from 'react';
-import { AtgTestRow } from '../types';
+import { AtgTestRow, TestType } from '../types';
 import { 
   CheckSquare, 
   Square, 
@@ -8,7 +8,6 @@ import {
   Sliders, 
   AlertCircle, 
   CheckCircle, 
-  Crosshair,
   Lock,
   Unlock
 } from 'lucide-react';
@@ -19,10 +18,16 @@ interface TestingTableProps {
   onToggleAll: (checked: boolean) => void;
   isEditAlgEnabled: boolean;
   isEditStdEnabled: boolean;
-  onMoveToMeter: (meter: number) => void;
+  activeTestMode: TestType;
   currentMotorPos: number;
   batasKesalahanMm: number;
 }
+
+const formatInteger = (value: string) => {
+  if (value.trim() === '') return '';
+  const numericValue = Number(value);
+  return Number.isFinite(numericValue) ? Math.round(numericValue).toString() : value;
+};
 
 export const TestingTable: React.FC<TestingTableProps> = ({
   rows,
@@ -30,12 +35,13 @@ export const TestingTable: React.FC<TestingTableProps> = ({
   onToggleAll,
   isEditAlgEnabled,
   isEditStdEnabled,
-  onMoveToMeter,
+  activeTestMode,
   currentMotorPos,
   batasKesalahanMm
 }) => {
   const allChecked = rows.every((r) => r.selected);
-  const someChecked = rows.some((r) => r.selected);
+  const selectedCount = rows.filter((r) => r.selected).length;
+  const isTeraUlang = activeTestMode === 'TERA_ULANG';
 
   return (
     <div className="flex-1 flex flex-col min-w-0 bg-[#0d1017] overflow-hidden">
@@ -53,11 +59,11 @@ export const TestingTable: React.FC<TestingTableProps> = ({
               ) : (
                 <Square className="w-4 h-4 text-zinc-500" />
               )}
-              <span>Pilih Semua Titik (1-17m)</span>
+              <span>{isTeraUlang ? 'Pilih Maks. 5 Titik' : 'Pilih Semua Titik (5-17m)'}</span>
             </button>
             <span className="text-zinc-600">|</span>
             <span className="text-zinc-400">
-              Aktif: <strong className="text-blue-400">{rows.filter((r) => r.selected).length}</strong> dari 17 Titik
+              Aktif: <strong className="text-blue-400">{selectedCount}</strong>{isTeraUlang ? ' dari maks. 5 Titik' : ' dari 13 Titik'}
             </span>
           </div>
         </div>
@@ -99,12 +105,11 @@ export const TestingTable: React.FC<TestingTableProps> = ({
               <th className="py-2.5 px-2 text-center bg-blue-950/30 border-l border-r border-blue-900/30 text-blue-300" colSpan={4}>
                 PEMBACAAN ALG (AUTOMATIC LIQUID GAUGE)
               </th>
-              <th className="py-2.5 px-2 text-center bg-emerald-950/30 border-r border-emerald-900/30 text-emerald-300" colSpan={3}>
+              <th className="py-2.5 px-2 text-center bg-emerald-950/30 border-r border-emerald-900/30 text-emerald-300" colSpan={2}>
                 PEMBACAAN STANDAR (PITA/LASER)
               </th>
               <th className="py-2.5 px-2 text-center w-24">Deviasi (mm)</th>
               <th className="py-2.5 px-2 text-center w-20">Status BKD</th>
-              <th className="py-2.5 px-2 text-center w-16">Aksi</th>
             </tr>
             <tr className="text-[10px] text-zinc-400 bg-[#12151e] border-b border-zinc-800/80">
               <th className="py-1 px-2 text-center">Check</th>
@@ -115,10 +120,8 @@ export const TestingTable: React.FC<TestingTableProps> = ({
               <th className="py-1 px-2 text-center text-blue-200">Disk. Ssdh</th>
               <th className="py-1 px-2 text-center text-emerald-200">Std Naik</th>
               <th className="py-1 px-2 text-center text-emerald-200">Std Turun</th>
-              <th className="py-1 px-2 text-center text-emerald-200">Cek (N/T)</th>
               <th className="py-1 px-2 text-center">Koreksi</th>
               <th className="py-1 px-2 text-center">Hasil</th>
-              <th className="py-1 px-2 text-center">Motor</th>
             </tr>
           </thead>
 
@@ -157,6 +160,7 @@ export const TestingTable: React.FC<TestingTableProps> = ({
                       type="checkbox"
                       id={`chk-point-${row.meter}`}
                       checked={row.selected}
+                      disabled={isTeraUlang && !row.selected && selectedCount >= 5}
                       onChange={(e) => onRowChange(idx, { selected: e.target.checked })}
                       className="w-4 h-4 rounded border-zinc-700 bg-zinc-900 text-blue-600 focus:ring-0 cursor-pointer"
                     />
@@ -185,7 +189,7 @@ export const TestingTable: React.FC<TestingTableProps> = ({
                       type="text"
                       id={`input-alg-naik-${row.meter}`}
                       disabled={!isEditAlgEnabled}
-                      value={row.algNaik}
+                      value={formatInteger(row.algNaik)}
                       onChange={(e) => onRowChange(idx, { algNaik: e.target.value })}
                       className={`w-full text-center px-1.5 py-1 rounded text-xs border transition ${
                         isEditAlgEnabled 
@@ -201,7 +205,7 @@ export const TestingTable: React.FC<TestingTableProps> = ({
                       type="text"
                       id={`input-alg-turun-${row.meter}`}
                       disabled={!isEditAlgEnabled}
-                      value={row.algTurun}
+                      value={formatInteger(row.algTurun)}
                       onChange={(e) => onRowChange(idx, { algTurun: e.target.value })}
                       className={`w-full text-center px-1.5 py-1 rounded text-xs border transition ${
                         isEditAlgEnabled 
@@ -217,7 +221,7 @@ export const TestingTable: React.FC<TestingTableProps> = ({
                       type="text"
                       id={`input-alg-disk-sblm-${row.meter}`}
                       disabled={!isEditAlgEnabled}
-                      value={row.algDiskSebelum}
+                      value={formatInteger(row.algDiskSebelum)}
                       onChange={(e) => onRowChange(idx, { algDiskSebelum: e.target.value })}
                       className={`w-full text-center px-1.5 py-1 rounded text-xs border transition ${
                         isEditAlgEnabled 
@@ -233,7 +237,7 @@ export const TestingTable: React.FC<TestingTableProps> = ({
                       type="text"
                       id={`input-alg-disk-ssdh-${row.meter}`}
                       disabled={!isEditAlgEnabled}
-                      value={row.algDiskSetelah}
+                      value={formatInteger(row.algDiskSetelah)}
                       onChange={(e) => onRowChange(idx, { algDiskSetelah: e.target.value })}
                       className={`w-full text-center px-1.5 py-1 rounded text-xs border transition ${
                         isEditAlgEnabled 
@@ -249,7 +253,7 @@ export const TestingTable: React.FC<TestingTableProps> = ({
                       type="text"
                       id={`input-std-naik-${row.meter}`}
                       disabled={!isEditStdEnabled}
-                      value={row.stdNaik}
+                      value={formatInteger(row.stdNaik)}
                       onChange={(e) => onRowChange(idx, { stdNaik: e.target.value })}
                       className={`w-full text-center px-1.5 py-1 rounded text-xs border transition ${
                         isEditStdEnabled 
@@ -265,7 +269,7 @@ export const TestingTable: React.FC<TestingTableProps> = ({
                       type="text"
                       id={`input-std-turun-${row.meter}`}
                       disabled={!isEditStdEnabled}
-                      value={row.stdTurun}
+                      value={formatInteger(row.stdTurun)}
                       onChange={(e) => onRowChange(idx, { stdTurun: e.target.value })}
                       className={`w-full text-center px-1.5 py-1 rounded text-xs border transition ${
                         isEditStdEnabled 
@@ -275,38 +279,14 @@ export const TestingTable: React.FC<TestingTableProps> = ({
                     />
                   </td>
 
-                  {/* FIELD PEMBACAAN STANDAR: Radio/Checkbox (Naik, Turun) */}
-                  <td className="py-1.5 px-1 text-center border-r border-zinc-800">
-                    <div className="flex items-center justify-center gap-2">
-                      <label className="flex items-center gap-0.5 cursor-pointer text-[10px] text-zinc-400 hover:text-emerald-300">
-                        <input
-                          type="checkbox"
-                          checked={row.stdNaikChecked}
-                          onChange={(e) => onRowChange(idx, { stdNaikChecked: e.target.checked })}
-                          className="w-3 h-3 rounded bg-zinc-900 border-zinc-700 text-emerald-600 focus:ring-0"
-                        />
-                        <span>N</span>
-                      </label>
-                      <label className="flex items-center gap-0.5 cursor-pointer text-[10px] text-zinc-400 hover:text-emerald-300">
-                        <input
-                          type="checkbox"
-                          checked={row.stdTurunChecked}
-                          onChange={(e) => onRowChange(idx, { stdTurunChecked: e.target.checked })}
-                          className="w-3 h-3 rounded bg-zinc-900 border-zinc-700 text-emerald-600 focus:ring-0"
-                        />
-                        <span>T</span>
-                      </label>
-                    </div>
-                  </td>
-
                   {/* DEVIASI / KOREKSI */}
-                  <td className="py-1.5 px-2 text-center text-[11px]">
+                  <td className="py-1.5 px-2 text-center text-[11px] border-r border-zinc-800">
                     <div className="flex flex-col items-center">
                       <span className={devNaik > 0 ? 'text-rose-400' : devNaik < 0 ? 'text-amber-400' : 'text-zinc-300'}>
-                        N: {devNaik >= 0 ? `+${devNaik.toFixed(2)}` : devNaik.toFixed(2)}
+                        N: {devNaik >= 0 ? `+${Math.round(devNaik)}` : Math.round(devNaik)}
                       </span>
                       <span className={devTurun > 0 ? 'text-rose-400' : devTurun < 0 ? 'text-amber-400' : 'text-zinc-300'}>
-                        T: {devTurun >= 0 ? `+${devTurun.toFixed(2)}` : devTurun.toFixed(2)}
+                        T: {devTurun >= 0 ? `+${Math.round(devTurun)}` : Math.round(devTurun)}
                       </span>
                     </div>
                   </td>
@@ -324,17 +304,6 @@ export const TestingTable: React.FC<TestingTableProps> = ({
                     )}
                   </td>
 
-                  {/* AKSI: PINDAHKAN MOTOR KE TITIK INI */}
-                  <td className="py-1.5 px-2 text-center">
-                    <button
-                      id={`btn-goto-${row.meter}`}
-                      onClick={() => onMoveToMeter(row.meter)}
-                      className="p-1 rounded bg-zinc-800 hover:bg-blue-600 text-zinc-300 hover:text-white transition cursor-pointer"
-                      title={`Gerakkan motor stepper ke ${row.meter} meter`}
-                    >
-                      <Crosshair className="w-3.5 h-3.5" />
-                    </button>
-                  </td>
                 </tr>
               );
             })}

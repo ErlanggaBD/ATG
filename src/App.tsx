@@ -20,34 +20,30 @@ import { BottomToolbar } from './components/BottomToolbar';
 import { SettingsModal } from './components/SettingsModal';
 import { PreviewModal } from './components/PreviewModal';
 import { TcpLogDrawer } from './components/TcpLogDrawer';
-import { SourceCodeViewer } from './components/SourceCodeViewer';
 import { DesktopWindowFrame } from './components/DesktopWindowFrame';
-import { DesktopCompilerModal } from './components/DesktopCompilerModal';
 
-// Generate 17 Default Rows
+const MIN_TEST_METER = 5;
+const MAX_TEST_METER = 17;
+
+// Generate default rows for test points 5m through 17m
 const createInitialRows = (): AtgTestRow[] => {
-  return Array.from({ length: 17 }, (_, i) => {
-    const meter = i + 1;
+  return Array.from({ length: MAX_TEST_METER - MIN_TEST_METER + 1 }, (_, i) => {
+    const meter = MIN_TEST_METER + i;
     const nominalMm = meter * 1000;
     return {
       meter,
       selected: true,
-      algNaik: nominalMm.toFixed(3),
-      algTurun: nominalMm.toFixed(3),
-      algDiskSebelum: (nominalMm - 0.2).toFixed(3),
-      algDiskSetelah: (nominalMm + 0.3).toFixed(3),
-      stdNaik: nominalMm.toFixed(3),
-      stdTurun: nominalMm.toFixed(3),
-      stdNaikChecked: true,
-      stdTurunChecked: true
+      algNaik: nominalMm.toFixed(0),
+      algTurun: nominalMm.toFixed(0),
+      algDiskSebelum: (nominalMm - 0.2).toFixed(0),
+      algDiskSetelah: (nominalMm + 0.3).toFixed(0),
+      stdNaik: nominalMm.toFixed(0),
+      stdTurun: nominalMm.toFixed(0)
     };
   });
 };
 
 export default function App() {
-  // Views
-  const [activeView, setActiveView] = useState<'GUI' | 'CODE'>('GUI');
-
   // Active Test Mode
   const [activeTestMode, setActiveTestMode] = useState<TestType>('KALIBRASI');
 
@@ -126,7 +122,6 @@ export default function App() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [isTcpLogOpen, setIsTcpLogOpen] = useState(false);
-  const [isCompilerModalOpen, setIsCompilerModalOpen] = useState(false);
 
   // Sequence state
   const [isRunningSequence, setIsRunningSequence] = useState(false);
@@ -219,46 +214,46 @@ export default function App() {
     updateTimestamp();
   };
 
-  // Handler: Pengujian Naik (1m -> 17m)
+  // Handler: Pengujian Naik (5m -> 17m)
   const handlePengujianNaik = () => {
     if (isRunningSequence) return;
     setIsRunningSequence(true);
-    addTcpLog('TX', 'CMD:SEQ_START_UP:1TO17\\r\\n');
+    addTcpLog('TX', 'CMD:SEQ_START_UP:5TO17\\r\\n');
 
-    let currentStep = 1;
-    handleMoveToMeter(1);
+    let currentStep = MIN_TEST_METER;
+    handleMoveToMeter(MIN_TEST_METER);
 
     if (sequenceIntervalRef.current) clearInterval(sequenceIntervalRef.current);
 
     sequenceIntervalRef.current = setInterval(() => {
       currentStep++;
-      if (currentStep > 17) {
+      if (currentStep > MAX_TEST_METER) {
         if (sequenceIntervalRef.current) clearInterval(sequenceIntervalRef.current);
         setIsRunningSequence(false);
-        addTcpLog('RX', 'ACK:SEQ_COMPLETE_UP;TOTAL_POINTS=17;STATUS=SUCCESS');
+        addTcpLog('RX', 'ACK:SEQ_COMPLETE_UP;TOTAL_POINTS=13;STATUS=SUCCESS');
         return;
       }
       handleMoveToMeter(currentStep);
     }, 1500);
   };
 
-  // Handler: Pengujian Turun (17m -> 1m)
+  // Handler: Pengujian Turun (17m -> 5m)
   const handlePengujianTurun = () => {
     if (isRunningSequence) return;
     setIsRunningSequence(true);
-    addTcpLog('TX', 'CMD:SEQ_START_DOWN:17TO1\\r\\n');
+    addTcpLog('TX', 'CMD:SEQ_START_DOWN:17TO5\\r\\n');
 
-    let currentStep = 17;
-    handleMoveToMeter(17);
+    let currentStep = MAX_TEST_METER;
+    handleMoveToMeter(MAX_TEST_METER);
 
     if (sequenceIntervalRef.current) clearInterval(sequenceIntervalRef.current);
 
     sequenceIntervalRef.current = setInterval(() => {
       currentStep--;
-      if (currentStep < 1) {
+      if (currentStep < MIN_TEST_METER) {
         if (sequenceIntervalRef.current) clearInterval(sequenceIntervalRef.current);
         setIsRunningSequence(false);
-        addTcpLog('RX', 'ACK:SEQ_COMPLETE_DOWN;TOTAL_POINTS=17;STATUS=SUCCESS');
+        addTcpLog('RX', 'ACK:SEQ_COMPLETE_DOWN;TOTAL_POINTS=13;STATUS=SUCCESS');
         return;
       }
       handleMoveToMeter(currentStep);
@@ -282,6 +277,13 @@ export default function App() {
   // Handler: Update Row Data
   const handleRowChange = (index: number, updated: Partial<AtgTestRow>) => {
     setRows((prev) => {
+      if (
+        activeTestMode === 'TERA_ULANG' &&
+        updated.selected === true &&
+        prev.filter((row) => row.selected).length >= 5
+      ) {
+        return prev;
+      }
       const next = [...prev];
       next[index] = { ...next[index], ...updated };
       return next;
@@ -290,7 +292,12 @@ export default function App() {
 
   // Handler: Toggle All Checkboxes
   const handleToggleAll = (checked: boolean) => {
-    setRows((prev) => prev.map((r) => ({ ...r, selected: checked })));
+    setRows((prev) => {
+      if (activeTestMode === 'TERA_ULANG') {
+        return prev.map((row, index) => ({ ...row, selected: checked && index < 5 }));
+      }
+      return prev.map((r) => ({ ...r, selected: checked }));
+    });
   };
 
   // Handler: Timestamp
@@ -312,6 +319,9 @@ export default function App() {
   // Handler: Select Menu Kiri
   const handleSelectTestMode = (mode: TestType) => {
     setActiveTestMode(mode);
+    if (mode === 'TERA_ULANG') {
+      setRows((prev) => prev.map((row) => ({ ...row, selected: false })));
+    }
     addTcpLog('TX', `CMD:SET_MODE:${mode}\\r\\n`);
     updateTimestamp();
   };
@@ -323,22 +333,22 @@ export default function App() {
         const nominal = r.meter * 1000;
         if (type === 'EVALUASI_AKURASI') {
           // Add realistic micrometer/millimeter deviation
-          const noiseNaik = (Math.sin(r.meter) * 0.45).toFixed(3);
-          const noiseTurun = (Math.cos(r.meter) * 0.35).toFixed(3);
+          const noiseNaik = Math.sin(r.meter) * 0.45;
+          const noiseTurun = Math.cos(r.meter) * 0.35;
           return {
             ...r,
-            algNaik: (nominal + parseFloat(noiseNaik)).toFixed(3),
-            algTurun: (nominal + parseFloat(noiseTurun)).toFixed(3),
-            stdNaik: nominal.toFixed(3),
-            stdTurun: nominal.toFixed(3)
+            algNaik: (nominal + noiseNaik).toFixed(0),
+            algTurun: (nominal + noiseTurun).toFixed(0),
+            stdNaik: nominal.toFixed(0),
+            stdTurun: nominal.toFixed(0)
           };
         } else {
           return {
             ...r,
-            algNaik: nominal.toFixed(3),
-            algTurun: nominal.toFixed(3),
-            stdNaik: nominal.toFixed(3),
-            stdTurun: nominal.toFixed(3)
+            algNaik: nominal.toFixed(0),
+            algTurun: nominal.toFixed(0),
+            stdNaik: nominal.toFixed(0),
+            stdTurun: nominal.toFixed(0)
           };
         }
       })
@@ -397,7 +407,6 @@ export default function App() {
     <DesktopWindowFrame
       motorStatus={motorStatus}
       tcpConfig={tcpConfig}
-      onOpenCompilerModal={() => setIsCompilerModalOpen(true)}
       onOpenSettings={() => setIsSettingsOpen(true)}
       onOpenPreview={() => setIsPreviewOpen(true)}
       onOpenTcpLog={() => setIsTcpLogOpen(true)}
@@ -408,31 +417,25 @@ export default function App() {
       onPengujianNaik={handlePengujianNaik}
       onPengujianTurun={handlePengujianTurun}
       onCloseApp={handleCloseApp}
-      onSwitchView={setActiveView}
-      activeView={activeView}
     >
       {/* Header Bar */}
       <Header
         motorStatus={motorStatus}
         tcpConfig={tcpConfig}
-        activeView={activeView}
-        setActiveView={setActiveView}
         onToggleTcp={handleToggleTcp}
         onEmergencyStop={handleEmergencyStop}
         onOpenTcpLog={() => setIsTcpLogOpen(true)}
-        onOpenCompilerModal={() => setIsCompilerModalOpen(true)}
         activeTestMode={activeTestMode}
       />
 
-      {activeView === 'GUI' ? (
-        <>
+      <>
           {/* Motor Linear Track Visualizer (0 - 17m) */}
           <MotorTrackVisualizer
             motorStatus={motorStatus}
             onMoveToMeter={handleMoveToMeter}
           />
 
-          {/* Main Work Area: Left Menu + Center/Right 1-17m Table */}
+          {/* Main Work Area: Left Menu + Center/Right 5-17m Table */}
           <main className="flex-1 flex flex-col lg:flex-row min-h-0 overflow-hidden">
             {/* 1. Bagian Kiri: 4 Tombol Menu Pengujian */}
             <TestingMenuLeft
@@ -442,14 +445,14 @@ export default function App() {
               onFillPresetData={handleFillPresetData}
             />
 
-            {/* 2. Bagian Tengah & Kanan: Tabel Bersusun 1-17 Meter */}
+            {/* 2. Bagian Tengah & Kanan: Tabel Bersusun 5-17 Meter */}
             <TestingTable
               rows={rows}
               onRowChange={handleRowChange}
               onToggleAll={handleToggleAll}
               isEditAlgEnabled={isEditAlgEnabled}
               isEditStdEnabled={isEditStdEnabled}
-              onMoveToMeter={handleMoveToMeter}
+              activeTestMode={activeTestMode}
               currentMotorPos={motorStatus.currentPositionMeter}
               batasKesalahanMm={exportSettings.batasKesalahanIzinMm}
             />
@@ -471,11 +474,7 @@ export default function App() {
             onToggleEditStd={() => setIsEditStdEnabled(!isEditStdEnabled)}
             isRunningSequence={isRunningSequence}
           />
-        </>
-      ) : (
-        /* Source Code Viewer (Win32 C Codebase Explorer) */
-        <SourceCodeViewer />
-      )}
+      </>
 
       {/* Modals & Drawers */}
       <SettingsModal
@@ -496,10 +495,6 @@ export default function App() {
         onExportCsv={handleExportCsv}
       />
 
-      <DesktopCompilerModal
-        isOpen={isCompilerModalOpen}
-        onClose={() => setIsCompilerModalOpen(false)}
-      />
 
       <TcpLogDrawer
         isOpen={isTcpLogOpen}

@@ -2,6 +2,9 @@ import React from 'react';
 import { MotorStatus } from '../types';
 import { Compass, Home, Target, ArrowRight, Gauge, AlertCircle } from 'lucide-react';
 
+const MIN_TRACK_METER = 5;
+const MAX_TRACK_METER = 17;
+
 interface MotorTrackVisualizerProps {
   motorStatus: MotorStatus;
   onMoveToMeter: (meter: number) => void;
@@ -12,8 +15,11 @@ export const MotorTrackVisualizer: React.FC<MotorTrackVisualizerProps> = ({
   onMoveToMeter
 }) => {
   const currentPos = motorStatus.currentPositionMeter;
-  // Calculate percentage along 0 - 17m scale
-  const posPercentage = Math.min(100, Math.max(0, (currentPos / 17.0) * 100));
+  // Calculate percentage along the 5 - 17m test scale
+  const posPercentage = Math.min(
+    100,
+    Math.max(0, ((currentPos - MIN_TRACK_METER) / (MAX_TRACK_METER - MIN_TRACK_METER)) * 100)
+  );
 
   return (
     <div className="bg-[#151821] border-b border-zinc-800/80 px-4 py-2.5 text-zinc-300 text-xs select-none">
@@ -21,7 +27,7 @@ export const MotorTrackVisualizer: React.FC<MotorTrackVisualizerProps> = ({
         <div className="flex items-center gap-2">
           <span className="font-semibold text-zinc-200 flex items-center gap-1.5">
             <Gauge className="w-3.5 h-3.5 text-blue-400" />
-            LINTASAN REL ATG HORIZONTAL (0 - 17.0 METER):
+            LINTASAN REL ATG HORIZONTAL (5 - 17.0 METER):
           </span>
           <span className="text-[11px] text-zinc-400">
             Titik Acuan: <strong className="text-amber-300 font-mono">5.0m (ZERO)</strong> & <strong className="text-emerald-300 font-mono">17.0m (HOME)</strong>
@@ -55,7 +61,7 @@ export const MotorTrackVisualizer: React.FC<MotorTrackVisualizerProps> = ({
         {/* 5m Zero Indicator Line */}
         <div 
           className="absolute top-0 bottom-0 w-[2px] bg-amber-500/80 z-10 flex flex-col items-center justify-between"
-          style={{ left: `${(5.0 / 17.0) * 100}%` }}
+          style={{ left: '0%' }}
         >
           <div className="bg-amber-500 text-black text-[9px] font-black px-1 rounded-b shadow">5m ZERO</div>
         </div>
@@ -63,14 +69,14 @@ export const MotorTrackVisualizer: React.FC<MotorTrackVisualizerProps> = ({
         {/* 17m Home Indicator Line */}
         <div 
           className="absolute top-0 bottom-0 w-[2px] bg-emerald-500/80 z-10 flex flex-col items-center justify-between"
-          style={{ left: `99.2%` }}
+          style={{ left: '100%' }}
         >
           <div className="bg-emerald-500 text-black text-[9px] font-black px-1 rounded-b shadow">17m HOME</div>
         </div>
 
-        {/* Meter Tick Marks 1 to 17 */}
-        {Array.from({ length: 17 }, (_, i) => i + 1).map((m) => {
-          const leftPct = (m / 17.0) * 100;
+        {/* Meter Tick Marks 5 to 17 */}
+        {Array.from({ length: MAX_TRACK_METER - MIN_TRACK_METER + 1 }, (_, i) => MIN_TRACK_METER + i).map((m) => {
+          const leftPct = ((m - MIN_TRACK_METER) / (MAX_TRACK_METER - MIN_TRACK_METER)) * 100;
           return (
             <button
               key={m}

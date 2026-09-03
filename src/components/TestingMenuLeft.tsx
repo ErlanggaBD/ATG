@@ -49,7 +49,7 @@ export const TestingMenuLeft: React.FC<TestingMenuLeftProps> = ({
       id: 'EVALUASI_AKURASI' as TestType,
       btnId: 'btn-menu-eval-akurasi',
       title: '3. EVALUASI AKURASI',
-      subtitle: 'Pengujian Titik 1m s.d 17m',
+      subtitle: 'Pengujian Titik 5m s.d 17m',
       desc: 'Uji linieritas dan kesalahan penunjukan (BKD: ±1.0 mm) di sepanjang rel uji.',
       icon: Ruler,
       color: 'from-purple-600/20 to-purple-900/10 border-purple-500/40 text-purple-400',

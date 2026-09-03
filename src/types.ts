@@ -9,8 +9,6 @@ export interface AtgTestRow {
   // Pembacaan Standar (misal Laser Tracker / Pita Ukur Standar)
   stdNaik: string;
   stdTurun: string;
-  stdNaikChecked: boolean;
-  stdTurunChecked: boolean;
   // Calculated deviation
   deviasiNaik?: number;
   deviasiTurun?: number;

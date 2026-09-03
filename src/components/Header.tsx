@@ -4,36 +4,27 @@ import {
   WifiOff, 
   Activity, 
   AlertOctagon, 
-  Code2, 
-  Monitor, 
   FileSpreadsheet,
   Terminal,
-  Zap,
-  Cpu
+  Zap
 } from 'lucide-react';
 import { MotorStatus, TcpConnectionConfig } from '../types';
 
 interface HeaderProps {
   motorStatus: MotorStatus;
   tcpConfig: TcpConnectionConfig;
-  activeView: 'GUI' | 'CODE';
-  setActiveView: (view: 'GUI' | 'CODE') => void;
   onToggleTcp: () => void;
   onEmergencyStop: () => void;
   onOpenTcpLog: () => void;
-  onOpenCompilerModal: () => void;
   activeTestMode: string;
 }
 
 export const Header: React.FC<HeaderProps> = ({
   motorStatus,
   tcpConfig,
-  activeView,
-  setActiveView,
   onToggleTcp,
   onEmergencyStop,
   onOpenTcpLog,
-  onOpenCompilerModal,
   activeTestMode
 }) => {
   return (
@@ -111,17 +102,6 @@ export const Header: React.FC<HeaderProps> = ({
 
       {/* Right Action Tools & Switchers */}
       <div className="flex items-center gap-2">
-        {/* Build .EXE Guide Button */}
-        <button
-          id="btn-open-compiler-guide"
-          onClick={onOpenCompilerModal}
-          className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs rounded-md bg-blue-600/20 hover:bg-blue-600/30 border border-blue-500/50 text-blue-300 font-medium transition cursor-pointer"
-          title="Panduan Kompilasi & Download Desktop .EXE"
-        >
-          <Cpu className="w-3.5 h-3.5 text-blue-400" />
-          <span className="hidden sm:inline">Build .EXE (Windows)</span>
-        </button>
-
         {/* TCP Live Log Button */}
         <button
           id="btn-open-tcplog"
@@ -132,35 +112,6 @@ export const Header: React.FC<HeaderProps> = ({
           <Terminal className="w-3.5 h-3.5 text-cyan-400" />
           <span>Log TCP</span>
         </button>
-
-        {/* View Switcher (GUI vs C Source Code) */}
-        <div className="flex bg-zinc-900 border border-zinc-800 p-0.5 rounded-lg text-xs">
-          <button
-            id="tab-gui-view"
-            onClick={() => setActiveView('GUI')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md font-medium transition cursor-pointer ${
-              activeView === 'GUI' 
-                ? 'bg-blue-600 text-white shadow-sm' 
-                : 'text-zinc-400 hover:text-zinc-200'
-            }`}
-          >
-            <Monitor className="w-3.5 h-3.5" />
-            <span>GUI Desktop</span>
-          </button>
-
-          <button
-            id="tab-code-view"
-            onClick={() => setActiveView('CODE')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md font-medium transition cursor-pointer ${
-              activeView === 'CODE' 
-                ? 'bg-blue-600 text-white shadow-sm' 
-                : 'text-zinc-400 hover:text-zinc-200'
-            }`}
-          >
-            <Code2 className="w-3.5 h-3.5 text-emerald-400" />
-            <span>Kode C (Win32)</span>
-          </button>
-        </div>
 
         {/* Emergency Stop Button */}
         <button
